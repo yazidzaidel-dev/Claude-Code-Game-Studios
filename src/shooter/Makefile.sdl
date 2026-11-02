@@ -1,0 +1,27 @@
+CXX      := g++
+CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wno-unused-parameter $(shell pkg-config --cflags sdl2 gl)
+LDFLAGS  := $(shell pkg-config --libs sdl2 gl) -lraylib -lm -lpthread -ldl -lrt
+
+INCLUDES := -I/usr/local/include -I/usr/include
+LIBDIRS  := -L/usr/local/lib -L/usr/lib/aarch64-linux-gnu
+
+TARGET   := ccgs_shooter_sdl
+SRCS     := main_sdl.cpp game.cpp player.cpp enemy.cpp level.cpp hud.cpp audio.cpp minimap.cpp
+OBJS     := $(SRCS:.cpp=.o)
+
+.PHONY: all clean run
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) $(LIBDIRS) $^ -o $@ $(LDFLAGS)
+	@echo "SDL2 Build complete: ./$(TARGET)"
+
+%.o: %.cpp
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@
+
+run: all
+	./$(TARGET)
+
+clean:
+	rm -f $(OBJS) $(TARGET)
