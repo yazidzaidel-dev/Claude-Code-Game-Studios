@@ -8,6 +8,7 @@
 #include "audio.h"
 #include "weapon.h"
 #include "minimap.h"
+#include "touch_controls.h"
 #include <vector>
 
 enum class GameState { MENU, PLAYING, PAUSED, GAME_OVER };
@@ -29,6 +30,7 @@ private:
     HUD              hud;
     AudioManager     audio;
     Minimap          minimap;
+    TouchControls    touchControls;
     std::vector<Enemy> enemies;
     Camera3D         camera = {};
 

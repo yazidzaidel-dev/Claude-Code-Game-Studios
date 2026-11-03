@@ -144,7 +144,10 @@ void Game::Update(float dt) {
     if (state == GameState::PAUSED) return;
 
     auto walls = level.GetWallBounds();
-    bool fired = player.Update(dt, walls);
+    bool touchShoot = false, touchSwitch = false;
+    touchControls.Update(GetScreenWidth(), GetScreenHeight(), player.yaw, player.pitch, touchShoot, touchSwitch);
+
+    bool fired = player.Update(dt, walls, touchControls.moveAxis, touchShoot, touchSwitch);
     if (fired)                    audio.PlayShoot();
     if (player.dryfireThisFrame)  audio.PlayDryFire();
     if (player.hurtFlash > 0.15f) audio.PlayPlayerHurt(); // triggered edge
@@ -219,6 +222,7 @@ void Game::Draw() {
                      GetScreenWidth(), GetScreenHeight(), player.hurtFlash);
             minimap.Draw(player.position, player.yaw, enemies, level.pickups,
                          level.GetWallBounds(), GetScreenWidth(), GetScreenHeight());
+            touchControls.Draw(GetScreenWidth(), GetScreenHeight());
             DrawPause();
             break;
         case GameState::PLAYING:
@@ -228,6 +232,7 @@ void Game::Draw() {
                      GetScreenWidth(), GetScreenHeight(), player.hurtFlash);
             minimap.Draw(player.position, player.yaw, enemies, level.pickups,
                          level.GetWallBounds(), GetScreenWidth(), GetScreenHeight());
+            touchControls.Draw(GetScreenWidth(), GetScreenHeight());
             break;
     }
 }

@@ -30,7 +30,6 @@ void Player::Shoot() {
         b.color    = wd.bulletColor;
         b.radius   = (wd.type == WeaponType::ROCKET) ? 0.18f : 0.06f;
 
-        // Apply spread
         float sx = wd.spread * (((float)rand()/RAND_MAX)*2.0f - 1.0f);
         float sy = wd.spread * (((float)rand()/RAND_MAX)*2.0f - 1.0f);
         Vector3 spreadDir = Vector3Normalize({
@@ -52,15 +51,18 @@ void Player::TakeDamage(int dmg) {
     hurtFlash = 0.18f;
 }
 
-bool Player::Update(float dt, const std::vector<BoundingBox>& walls) {
-    firedThisFrame    = false;
-    dryfireThisFrame  = false;
+bool Player::Update(float dt, const std::vector<BoundingBox>& walls, Vector2 touchMoveAxis, bool touchShoot, bool touchSwitch) {
+    firedThisFrame   = false;
+    dryfireThisFrame = false;
+    switchWeaponReq  = touchSwitch;
 
-    // --- Mouse look ---
+    // --- Mouse look (if desktop mouse) ---
     Vector2 md = GetMouseDelta();
-    yaw   += md.x * MOUSE_SENS;
-    pitch -= md.y * MOUSE_SENS;
-    pitch  = std::clamp(pitch, -1.4f, 1.4f);
+    if (md.x != 0 || md.y != 0) {
+        yaw   += md.x * MOUSE_SENS;
+        pitch -= md.y * MOUSE_SENS;
+        pitch  = std::clamp(pitch, -1.4f, 1.4f);
+    }
 
     direction = Vector3Normalize({
         std::sin(yaw) * std::cos(pitch),
@@ -69,13 +71,21 @@ bool Player::Update(float dt, const std::vector<BoundingBox>& walls) {
     });
     Vector3 right = Vector3Normalize(Vector3CrossProduct(direction, {0,1,0}));
 
-    // --- Movement ---
+    // --- Movement (Keyboard WASD + Touch Joystick Axis) ---
     Vector3 move   = {0,0,0};
     Vector3 flatFwd = Vector3Normalize({direction.x, 0, direction.z});
+    Vector3 flatRight = Vector3Normalize({right.x, 0, right.z});
+
     if (IsKeyDown(KEY_W)) move = Vector3Add(move, flatFwd);
     if (IsKeyDown(KEY_S)) move = Vector3Subtract(move, flatFwd);
-    if (IsKeyDown(KEY_A)) move = Vector3Subtract(move, right);
-    if (IsKeyDown(KEY_D)) move = Vector3Add(move, right);
+    if (IsKeyDown(KEY_A)) move = Vector3Subtract(move, flatRight);
+    if (IsKeyDown(KEY_D)) move = Vector3Add(move, flatRight);
+
+    // Add touch joystick movement
+    if (touchMoveAxis.x != 0.0f || touchMoveAxis.y != 0.0f) {
+        move = Vector3Add(move, Vector3Scale(flatFwd, touchMoveAxis.y));
+        move = Vector3Add(move, Vector3Scale(flatRight, touchMoveAxis.x));
+    }
 
     if (Vector3Length(move) > 0.001f) {
         move = Vector3Scale(Vector3Normalize(move), speed * dt);
@@ -93,10 +103,18 @@ bool Player::Update(float dt, const std::vector<BoundingBox>& walls) {
         if (!hitZ) position.z = np.z;
     }
 
+    // --- Weapon Cycle on Switch Button ---
+    if (switchWeaponReq || IsKeyPressed(KEY_Q)) {
+        int next = ((int)currentWeapon + 1) % 4;
+        currentWeapon = (WeaponType)next;
+        ammo = GetWeaponDef(currentWeapon).ammoCapacity;
+    }
+
     // --- Shoot ---
     const WeaponDef& wd = Weapon();
     shootCooldown -= dt;
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && shootCooldown <= 0.0f) {
+    bool triggerPull = IsMouseButtonDown(MOUSE_BUTTON_LEFT) || IsKeyDown(KEY_SPACE) || touchShoot;
+    if (triggerPull && shootCooldown <= 0.0f) {
         if (ammo > 0) {
             Shoot();
             shootCooldown  = 1.0f / wd.fireRate;
@@ -116,7 +134,6 @@ bool Player::Update(float dt, const std::vector<BoundingBox>& walls) {
     bullets.erase(std::remove_if(bullets.begin(), bullets.end(),
         [](const Bullet& b){ return !b.active; }), bullets.end());
 
-    // Hurt flash decay
     if (hurtFlash > 0.0f) hurtFlash -= dt;
 
     return firedThisFrame;

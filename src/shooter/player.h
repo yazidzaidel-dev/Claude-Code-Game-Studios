@@ -25,16 +25,16 @@ public:
     float    speed     = 8.0f;
     float    shootCooldown  = 0.0f;
     float    hurtFlash      = 0.0f; // screen-flash timer
-    bool     firedThisFrame = false;
+    bool     firedThisFrame   = false;
     bool     dryfireThisFrame = false;
+    bool     switchWeaponReq  = false;
 
     WeaponType currentWeapon = WeaponType::PISTOL;
 
     std::vector<Bullet> bullets;
 
     void Init();
-    // Returns true if shot was fired
-    bool Update(float dt, const std::vector<BoundingBox>& walls);
+    bool Update(float dt, const std::vector<BoundingBox>& walls, Vector2 touchMoveAxis, bool touchShoot, bool touchSwitch);
     void Shoot();
     void TakeDamage(int dmg);
     void PickupWeapon(WeaponType t);
